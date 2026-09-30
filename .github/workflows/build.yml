@@ -4,20 +4,50 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Java 17
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java Development Kit
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.1.4'
-      - name: Build Debug APK
-        run: gradle assembleDebug
-      - name: Upload Finished APK File
+
+      - name: Manual Command Line Android Compile
+        run: |
+          # 1. Create a safe, flat layout matching the script inputs
+          mkdir -p src/com/example/offlinecontroller res/xml obj
+          
+          # 2. Extract files out of the nested app folders into the working zone
+          cp app/src/main/AndroidManifest.xml src/
+          cp app/src/main/res/xml/device_admin_policies.xml res/xml/
+          cp app/src/main/java/com/example/offlinecontroller/AdbCommandReceiver.java src/com/example/offlinecontroller/
+          
+          # 3. Pull down official Google command line developer binaries
+          wget -q https://google.com
+          unzip -q commandlinetools-linux-*_latest.zip
+          
+          # 4. Accept licenses and download targeted Android 13 core files
+          yes | cmdline-tools/bin/sdkmanager --sdk_root=sdk "platforms;android-33" "build-tools;33.0.2" > /dev/null
+          
+          # 5. Package raw XML layouts and resources into a foundational zip base
+          sdk/build-tools/33.0.2/aapt package -f -M src/AndroidManifest.xml -S res -I sdk/platforms/android-33/android.jar -F final-unsigned.apk
+          
+          # 6. Compile Java code directly against the official Android Framework 
+          javac -d obj -cp sdk/platforms/android-33/android.jar src/com/example/offlinecontroller/*.java
+          
+          # 7. Convert compiled Java objects into standard Android runtime assembly execution code (.dex)
+          sdk/build-tools/33.0.2/d8 --output=. obj/com/example/offlinecontroller/*.class --lib sdk/platforms/android-33/android.jar
+          
+          # 8. Inject runtime execution modules into the final package base
+          zip -quj final-unsigned.apk classes.dex
+          
+          # 9. Sign it using standard debugging certificates so the device accepts it
+          keytool -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 10000 -keyalg RSA -keysize 2048
+          sdk/build-tools/33.0.2/apksigner sign --ks debug.keystore --ks-pass pass:android --out HeadlessController.apk final-unsigned.apk
+
+      - name: Distribute Compiled App Bundle
         uses: actions/upload-artifact@v4
         with:
           name: HeadlessControllerAPK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: HeadlessController.apk
