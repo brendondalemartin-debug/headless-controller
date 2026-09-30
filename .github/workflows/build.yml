@@ -1,0 +1,32 @@
+yaml
+name: Headless APK Builder
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Compile Headless APK via Android Command Line Tools
+        run: |
+          mkdir -p src/com/example/offlinecontroller res/xml
+          mv AndroidManifest.xml src/
+          mv AdbCommandReceiver.java src/com/example/offlinecontroller/
+          mv device_admin_policies.xml res/xml/
+          wget https://google.com
+          unzip commandlinetools-linux-*_latest.zip
+          yes | cmdline-tools/bin/sdkmanager --sdk_root=sdk "platforms;android-33" "build-tools;33.0.2"
+          sdk/build-tools/33.0.2/aapt package -f -M src/AndroidManifest.xml -S res -I sdk/platforms/android-33/android.jar -F headless-raw.apk
+          sdk/build-tools/33.0.2/javac -d obj -cp sdk/platforms/android-33/android.jar src/com/example/offlinecontroller/*.java
+          sdk/build-tools/33.0.2/dx --dex --output=classes.dex obj
+          zip -uj headless-raw.apk classes.dex
+          sdk/build-tools/33.0.2/apksigner debugme --ks-pass pass:android --ks debug.keystore headless-raw.apk || true
+      - name: Upload Finished APK File
+        uses: actions/upload-artifact@v4
+        with:
+          name: HeadlessControllerAPK
+          path: headless-raw.apk
