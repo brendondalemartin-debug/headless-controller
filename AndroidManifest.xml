@@ -1,0 +1,13 @@
+<manifest xmlns:android="http://android.com" package="com.example.offlinecontroller">
+    <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
+    <application android:allowBackup="false" android:label="System Controller">
+        <receiver android:name=".AdbCommandReceiver" android:permission="android.permission.BIND_DEVICE_ADMIN" android:exported="true">
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="com.example.OFFLINE_ON" />
+                <action android:name="com.example.OFFLINE_OFF" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
