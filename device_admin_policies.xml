@@ -1,7 +1,0 @@
-xml
-<?xml version="1.0" encoding="utf-8"?>
-<device-admin xmlns:android="http://android.com">
-    <uses-policies>
-        <wipe-data />
-    </uses-policies>
-</device-admin>
